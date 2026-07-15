@@ -1,3 +1,5 @@
+![](img/banner.png)
+
 # Route Debugger
 
 A dynamic-capture plugin for [Zoraxy](https://github.com/tobychui/zoraxy) that captures and inspects
