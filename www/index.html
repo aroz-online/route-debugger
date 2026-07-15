@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="zoraxy.csrf.Token" content="{{.csrfToken}}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="./logo.svg">
+    <script src="/script/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="./style.css">
+    <title>Route Debugger</title>
+</head>
+<body>
+<!-- ===================== NAVBAR ===================== -->
+<div class="navbar">
+    <div class="brand"><img class="logo" src="./logo.svg" alt="Route Debugger"> <span class="brand-text">Route Debugger</span></div>
+    <div class="nav-links">
+        <button class="nav-link active" data-view="captures" onclick="switchView('captures')" title="Live Captures"><span class="icon icon-dashboard"></span> <span class="nav-text">Live Captures</span></button>
+        <button class="nav-link" data-view="rules" onclick="switchView('rules')" title="Capture Rules"><span class="icon icon-rules"></span> <span class="nav-text">Capture Rules</span></button>
+        <button class="nav-link" data-view="settings" onclick="switchView('settings')" title="Settings"><span class="icon icon-settings"></span> <span class="nav-text">Settings</span></button>
+    </div>
+</div>
+
+<div class="content">
+    <!-- ===================== LIVE CAPTURES ===================== -->
+    <div class="view active" data-view="captures">
+        <div class="dash">
+            <!-- sidebar: recent captures -->
+            <div class="panel sidebar">
+                <div class="sidebar-head">
+                    <span class="title">Recent Captures</span>
+                    <button class="btn btn-ghost btn-sm" onclick="clearCaptures()"><span class="icon icon-delete"></span> Clear</button>
+                </div>
+                <label class="switch" style="margin-bottom:0.6rem;">
+                    <input type="checkbox" id="autoRefresh" checked onchange="toggleAuto()">
+                    <span class="track"></span>
+                    <span style="font-size:0.82rem;color:var(--muted);">Auto-refresh</span>
+                </label>
+                <div class="cap-list" id="capList"><div class="loading">Loading…</div></div>
+            </div>
+            <!-- main pane: capture detail -->
+            <div id="mainPane">
+                <div class="panel panel-pad"><div class="empty"><div class="big">🔍</div>Select a captured request to inspect it, or send a request that matches one of your rules.</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== CAPTURE RULES ===================== -->
+    <div class="view" data-view="rules">
+        <div class="view-head">
+            <h2>Capture Rules</h2><div class="spacer"></div>
+            <button class="btn btn-primary" onclick="openRuleModal()">＋ Add Rule</button>
+        </div>
+        <div class="note">
+            Requests whose <b>host + path</b> match a rule's pattern are captured. Use <code>*</code> as a wildcard, e.g.
+            <code>my.example.com/test/*</code> or <code>*/debug/*</code>. Patterns match from the start (prefix).
+            <br><b>Intercept</b> answers the request with a debug dump (not proxied upstream); <b>Tap</b> logs the request but still proxies it upstream.
+        </div>
+        <div class="panel">
+            <table class="tbl">
+                <thead><tr><th>Name</th><th>Pattern</th><th>Mode</th><th>Enabled</th><th></th></tr></thead>
+                <tbody id="ruleList"><tr><td colspan="5" class="loading">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===================== SETTINGS ===================== -->
+    <div class="view" data-view="settings">
+        <div class="view-head"><h2>Settings</h2></div>
+        <div class="panel panel-pad" style="max-width:560px;">
+            <div class="form-row two">
+                <div class="field">
+                    <label>Capture Log Size</label>
+                    <input type="number" id="setLogLimit" min="1" placeholder="200">
+                    <span class="hint">Max captured requests kept in memory.</span>
+                </div>
+                <div class="field">
+                    <label>Body Preview (bytes)</label>
+                    <input type="number" id="setBodyPreview" min="0" placeholder="4096">
+                    <span class="hint">Max request body bytes captured per request.</span>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveSettings()"><span class="icon icon-save"></span> Save Settings</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== RULE MODAL ===================== -->
+<div class="modal-overlay" id="ruleModal">
+    <div class="modal-box">
+        <div class="modal-head" id="ruleModalTitle">Add Rule</div>
+        <div class="modal-body">
+            <input type="hidden" id="rId">
+            <div class="form-row">
+                <div class="field">
+                    <label>Name</label>
+                    <input type="text" id="rName" placeholder="e.g. Debug API">
+                    <span class="hint">Optional label. Defaults to the pattern.</span>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label>Match Pattern (host + path)</label>
+                    <input type="text" id="rPattern" class="mono" placeholder="*/debug/*">
+                    <span class="hint">Matched against <code>host</code>+<code>path</code>. <code>*</code> = any, <code>?</code> = one char.</span>
+                </div>
+            </div>
+            <div class="form-row two">
+                <div class="field">
+                    <label>Mode</label>
+                    <select id="rMode" onchange="onModeChange()">
+                        <option value="intercept">Intercept — return debug page</option>
+                        <option value="tap">Tap — log &amp; proxy upstream</option>
+                    </select>
+                </div>
+                <div class="field" id="prettyField">
+                    <label>Intercept Response</label>
+                    <select id="rPretty">
+                        <option value="true">HTML report</option>
+                        <option value="false">Plain text</option>
+                    </select>
+                </div>
+            </div>
+            <label class="switch">
+                <input type="checkbox" id="rEnabled" checked>
+                <span class="track"></span>
+                <span>Enabled</span>
+            </label>
+        </div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="closeModal('ruleModal')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveRule()"><span class="icon icon-save"></span> Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== CONFIRM MODAL ===================== -->
+<div class="modal-overlay" id="confirmModal">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-head">Please confirm</div>
+        <div class="modal-body"><p id="confirmMsg" style="margin:0;color:var(--muted);"></p></div>
+        <div class="modal-foot">
+            <button class="btn btn-ghost" onclick="_confirmFinish(false)">Cancel</button>
+            <button class="btn btn-primary" id="confirmOkBtn" onclick="_confirmFinish(true)">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./app.js"></script>
+</body>
+</html>

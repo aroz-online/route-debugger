@@ -1,0 +1,20 @@
+{
+ "id": "org.aroz.zoraxy.route-debugger",
+ "name": "Route Debugger",
+ "author": "aroz.org",
+ "author_contact": "noreply@aroz.org",
+ "description": "Capture and inspect proxied requests on matching host/path patterns. Intercept requests to return a debug dump, or passively tap them while they proxy upstream.",
+ "url": "https://github.com/tobychui/zoraxy",
+ "type": 0,
+ "version_major": 1,
+ "version_minor": 0,
+ "version_patch": 0,
+ "static_capture_paths": null,
+ "static_capture_ingress": "",
+ "dynamic_capture_sniff": "/d_sniff",
+ "dynamic_capture_ingress": "/d_capture",
+ "ui_path": "/",
+ "subscription_path": "",
+ "subscriptions_events": null,
+ "permitted_api_endpoints": null
+}
